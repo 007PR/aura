@@ -55,17 +55,31 @@ def _extract_kv(text: str, key_map: dict) -> dict:
     if not text:
         return {}
     out = {}
-    for raw in text.splitlines():
-        line = raw.strip().lstrip("-•*")
+    lines = [ln.strip().lstrip("-•*—") for ln in text.splitlines()]
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         if not line:
+            i += 1
             continue
-        m = re.match(r"^([A-Za-z _]+)\s*[:\-–]\s*(.+)$", line)
-        if not m:
+        m = re.match(r"^([A-Za-z _]+)\s*[:\-–—]\s*(.+)$", line)
+        if m:
+            k = m.group(1).strip().lower()
+            v = m.group(2).strip()
+            if k in key_map:
+                out[key_map[k]] = v
+            i += 1
             continue
-        k = m.group(1).strip().lower()
-        v = m.group(2).strip()
-        if k in key_map:
-            out[key_map[k]] = v
+        key_only = line.strip().lower()
+        if key_only in key_map:
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines):
+                out[key_map[key_only]] = lines[j].strip()
+                i = j + 1
+                continue
+        i += 1
     return out
 
 
@@ -81,6 +95,22 @@ def _parse_remedy_from_text(text: str) -> dict:
         "timing": "timing",
     }
     return _extract_kv(text, key_map)
+
+
+def _fallback_remedy_from_text(text: str, concern: str) -> dict:
+    t = (text or "").strip()
+    if not t:
+        return {}
+    first_line = t.splitlines()[0].strip() if t.splitlines() else t
+    title = (first_line[:60] or "Personalized Upay").rstrip(".")
+    return {
+        "title": title,
+        "description": t[:800],
+        "icon": "🪔",
+        "for_concern": concern or "general",
+        "planetary_basis": "Based on your current transits.",
+        "timing": "Today",
+    }
 
 
 def _parse_match_from_text(text: str) -> dict:
@@ -433,6 +463,8 @@ async def generate_remedy(
     result = _extract_json(response_text)
     if result is None:
         result = _parse_remedy_from_text(response_text)
+    if not result:
+        result = _fallback_remedy_from_text(response_text, concern)
     if not result:
         result = {
                 "title": "General Wellness Upay",
