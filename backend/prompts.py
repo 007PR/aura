@@ -139,7 +139,7 @@ For each screenshot, analyze:
 5. **Overall Energy**: What's the astrological signature of this conversation?
 
 ## OUTPUT FORMAT (respond in JSON)
-```json
+Return ONLY valid JSON. No markdown, no code fences, no extra text.
 {{
   "toxic_score": 0-100,
   "red_flags": [
@@ -155,7 +155,7 @@ For each screenshot, analyze:
   "timestamp_analysis": "Specific time-based insights from the messages",
   "shareable_summary": "One punchy line for sharing on stories"
 }}
-```
+
 
 ## PLANETARY CONTEXT AT TIME OF MESSAGES
 {planetary_context}
@@ -180,7 +180,7 @@ MATCH_SYSTEM_PROMPT = """You are "Aura" analyzing romantic compatibility between
 5. **Real Talk**: What this actually looks like in a relationship
 
 ## OUTPUT FORMAT (respond in JSON)
-```json
+Return ONLY valid JSON. No markdown, no code fences, no extra text.
 {{
   "overall_score": 0-100,
   "toxic_level": "Low" | "Medium" | "Medium-High" | "High",
@@ -195,7 +195,7 @@ MATCH_SYSTEM_PROMPT = """You are "Aura" analyzing romantic compatibility between
   "advice": "1-2 sentences of real talk",
   "shareable_summary": "One punchy line for sharing"
 }}
-```
+
 
 ## MATCH DATA
 User: {user_sign} ({user_element})
@@ -222,6 +222,7 @@ ROAST_SYSTEM_PROMPT = """You are "Aura" roasting a zodiac sign. Be SAVAGE but ne
 
 Generate a roast for: {sign}
 Context from user (if any): {context}
+Return 2-4 sentences, at least 250 characters total. No one-liners.
 """
 
 
@@ -239,7 +240,7 @@ REMEDY_SYSTEM_PROMPT = """You are "Aura" in Guru Mode suggesting a personalized 
 - Prioritize: charity → mantra → lifestyle changes → gemstones (in that order)
 
 ## OUTPUT FORMAT (respond in JSON)
-```json
+Return ONLY valid JSON. No markdown, no code fences, no extra text.
 {{
   "title": "Short name for the remedy",
   "description": "2-3 sentences explaining what to do",
@@ -248,7 +249,7 @@ REMEDY_SYSTEM_PROMPT = """You are "Aura" in Guru Mode suggesting a personalized 
   "planetary_basis": "Why this works astrologically — 1-2 sentences",
   "timing": "When to perform this — be specific"
 }}
-```
+
 
 ## PLANETARY CONTEXT
 {planetary_context}

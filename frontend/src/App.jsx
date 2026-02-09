@@ -161,18 +161,31 @@ function Home({ user }) {
   useEffect(() => {
     let active = true;
     const load = async () => {
+      setError("");
+      const errs = [];
+      // Battery
       try {
-        setError("");
         const batteryRes = await apiPost("/api/battery", { user_id: user.id, sign: user.sign, dob: user.dob });
-        const roastRes = await apiPost("/api/roast", { user_id: user.id, sign: user.sign });
-        const remedyRes = await apiPost("/api/remedy", { user_id: user.id, sign: user.sign, concern: "general" });
-        if (!active) return;
-        setBattery(batteryRes);
-        setRoast(roastRes);
-        setRemedy(remedyRes);
+        if (active) setBattery(batteryRes);
       } catch (e) {
-        if (!active) return;
-        setError(e.message || "Failed to load daily data");
+        errs.push(e.message || "Battery failed");
+      }
+      // Roast
+      try {
+        const roastRes = await apiPost("/api/roast", { user_id: user.id, sign: user.sign });
+        if (active) setRoast(roastRes);
+      } catch (e) {
+        errs.push(e.message || "Roast failed");
+      }
+      // Remedy
+      try {
+        const remedyRes = await apiPost("/api/remedy", { user_id: user.id, sign: user.sign, concern: "general" });
+        if (active) setRemedy(remedyRes);
+      } catch (e) {
+        errs.push(e.message || "Remedy failed");
+      }
+      if (active && errs.length) {
+        setError(errs.join(" | "));
       }
     };
     load();

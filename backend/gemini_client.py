@@ -16,6 +16,35 @@ from prompts import (
     REMEDY_SYSTEM_PROMPT,
 )
 
+
+import ast
+
+
+def _extract_json(text: str):
+    """Extract JSON object from model output."""
+    if not text:
+        return None
+    # Strip code fences if any
+    t = text.strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+    # Find JSON object substring
+    start = t.find("{")
+    end = t.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    snippet = t[start:end+1]
+    # Try JSON first
+    try:
+        return json.loads(snippet)
+    except Exception:
+        pass
+    # Try Python literal dict
+    try:
+        return ast.literal_eval(snippet)
+    except Exception:
+        return None
+
 # ═══════════════════════════════════════════════════════════════
 # GENERATION CONFIGS
 # ═══════════════════════════════════════════════════════════════
@@ -35,7 +64,7 @@ GURU_CONFIG = {
 }
 
 ANALYSIS_CONFIG = {
-    "temperature": 0.8,
+    "temperature": 0.2,
     "topP": 0.9,
     "topK": 30,
     "maxOutputTokens": 1500,
@@ -206,16 +235,9 @@ Analyze this chat screenshot. Read every message, note timestamps, and cross-ref
 
     response_text = await _generate_content(settings.GEMINI_MODEL_PRO, contents, ANALYSIS_CONFIG)
 
-    try:
-        result = json.loads(response_text)
-    except json.JSONDecodeError:
-        text = response_text
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            result = json.loads(text[start:end])
-        else:
-            result = {
+    result = _extract_json(response_text)
+    if result is None:
+        result = {
                 "toxic_score": 65,
                 "red_flags": [{"flag": "Could not fully analyze", "severity": 5, "planetary_cause": "Mercury interference"}],
                 "verdict": text[:500],
@@ -261,16 +283,9 @@ async def check_compatibility(
 
     response_text = await _generate_content(settings.GEMINI_MODEL_FLASH, contents, ANALYSIS_CONFIG)
 
-    try:
-        result = json.loads(response_text)
-    except json.JSONDecodeError:
-        text = response_text
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            result = json.loads(text[start:end])
-        else:
-            result = {
+    result = _extract_json(response_text)
+    if result is None:
+        result = {
                 "overall_score": 65,
                 "toxic_level": "Medium",
                 "verdict": f"{user_sign.capitalize()} and {crush_sign.capitalize()} — it's complicated. The stars are still deliberating.",
@@ -306,7 +321,7 @@ async def generate_roast(
     response_text = await _generate_content(
         settings.GEMINI_MODEL_FLASH,
         contents,
-        {"temperature": 0.95, "maxOutputTokens": 200}
+        {"temperature": 0.9, "maxOutputTokens": 400}
     )
 
     return response_text
@@ -334,16 +349,9 @@ async def generate_remedy(
 
     response_text = await _generate_content(settings.GEMINI_MODEL_PRO, contents, ANALYSIS_CONFIG)
 
-    try:
-        result = json.loads(response_text)
-    except json.JSONDecodeError:
-        text = response_text
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            result = json.loads(text[start:end])
-        else:
-            result = {
+    result = _extract_json(response_text)
+    if result is None:
+        result = {
                 "title": "General Wellness Upay",
                 "description": "Light a ghee diya at sunset and meditate for 5 minutes.",
                 "icon": "🪔",
