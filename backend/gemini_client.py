@@ -58,19 +58,25 @@ def _extract_kv(text: str, key_map: dict) -> dict:
     lines = [ln.strip().lstrip("-•*—") for ln in text.splitlines()]
     i = 0
     while i < len(lines):
-        line = lines[i]
-        if not line:
+        line = lines[i].strip()
+        if not line or line in ("{", "}", "[", "]"):
             i += 1
             continue
         m = re.match(r"^([A-Za-z _]+)\s*[:\-–—]\s*(.+)$", line)
+        if not m:
+            m = re.match(r'^"?([A-Za-z _]+)"?\s*:\s*(.+)$', line)
         if m:
-            k = m.group(1).strip().lower()
-            v = m.group(2).strip()
-            if k in key_map:
+            k = m.group(1).strip().lower().strip('"'')
+            v = m.group(2).strip().rstrip(",")
+            if len(v) >= 2 and ((v[0] == '"' and v.endswith('"')) or (v[0] == "'" and v.endswith("'"))):
+                v = v[1:-1].strip()
+            elif v.startswith('"') or v.startswith("'"):
+                v = v[1:].strip()
+            if k in key_map and v:
                 out[key_map[k]] = v
             i += 1
             continue
-        key_only = line.strip().lower()
+        key_only = line.strip().lower().strip('"'')
         if key_only in key_map:
             j = i + 1
             while j < len(lines) and not lines[j].strip():
@@ -101,6 +107,24 @@ def _fallback_remedy_from_text(text: str, concern: str) -> dict:
     t = (text or "").strip()
     if not t:
         return {}
+    title_line = None
+    for ln in t.splitlines():
+        s = ln.strip()
+        if not s or s in ("{", "}", "[", "]"):
+            continue
+        if ":" in s:
+            continue
+        title_line = s
+        break
+    title = (title_line or "Personalized Upay")[:60].rstrip(".")
+    return {
+        "title": title,
+        "description": t[:800],
+        "icon": "🪔",
+        "for_concern": concern or "general",
+        "planetary_basis": "Based on your current transits.",
+        "timing": "Today",
+    }
     first_line = t.splitlines()[0].strip() if t.splitlines() else t
     title = (first_line[:60] or "Personalized Upay").rstrip(".")
     return {
