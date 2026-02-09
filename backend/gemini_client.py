@@ -3,6 +3,7 @@
 
 import json
 import base64
+import re
 from typing import Optional, List, Dict
 import httpx
 
@@ -24,27 +25,103 @@ def _extract_json(text: str):
     """Extract JSON object from model output."""
     if not text:
         return None
-    # Strip code fences if any
     t = text.strip()
     if t.startswith("```"):
         t = t.strip("`")
-    # Find JSON object substring
     start = t.find("{")
     end = t.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return None
-    snippet = t[start:end+1]
-    # Try JSON first
+    snippet = t[start:end + 1]
+    snippet = re.sub(r",\s*([}\]])", r"\1", snippet)
     try:
-        return json.loads(snippet)
+        obj = json.loads(snippet)
+        if isinstance(obj, dict) and "candidates" in obj:
+            return None
+        return obj
     except Exception:
         pass
-    # Try Python literal dict
     try:
-        return ast.literal_eval(snippet)
+        obj = ast.literal_eval(snippet)
+        if isinstance(obj, dict) and "candidates" in obj:
+            return None
+        return obj
     except Exception:
         return None
 
+
+def _extract_kv(text: str, key_map: dict) -> dict:
+    """Extract key/value lines like 'Title: ...' into a dict."""
+    if not text:
+        return {}
+    out = {}
+    for raw in text.splitlines():
+        line = raw.strip().lstrip("-•*")
+        if not line:
+            continue
+        m = re.match(r"^([A-Za-z _]+)\s*[:\-–]\s*(.+)$", line)
+        if not m:
+            continue
+        k = m.group(1).strip().lower()
+        v = m.group(2).strip()
+        if k in key_map:
+            out[key_map[k]] = v
+    return out
+
+
+def _parse_remedy_from_text(text: str) -> dict:
+    key_map = {
+        "title": "title",
+        "description": "description",
+        "icon": "icon",
+        "for concern": "for_concern",
+        "concern": "for_concern",
+        "planetary basis": "planetary_basis",
+        "reason": "planetary_basis",
+        "timing": "timing",
+    }
+    return _extract_kv(text, key_map)
+
+
+def _parse_match_from_text(text: str) -> dict:
+    key_map = {
+        "overall score": "overall_score",
+        "score": "overall_score",
+        "toxic level": "toxic_level",
+        "verdict": "verdict",
+        "element dynamics": "element_dynamics",
+        "advice": "advice",
+        "summary": "shareable_summary",
+        "shareable summary": "shareable_summary",
+    }
+    data = _extract_kv(text, key_map)
+    breakdown = {}
+    for raw in text.splitlines():
+        line = raw.strip().lower().lstrip("-•*")
+        m = re.match(r"^(emotional|physical|intellectual|spiritual)\s*[:\-–]\s*(\d{1,3})", line)
+        if m:
+            breakdown[m.group(1)] = int(m.group(2))
+    if breakdown:
+        data["breakdown"] = breakdown
+    return data
+
+
+def _parse_receipts_from_text(text: str) -> dict:
+    key_map = {
+        "toxic score": "toxic_score",
+        "verdict": "verdict",
+        "planetary context": "planetary_context",
+        "advice": "advice",
+        "timestamp analysis": "timestamp_analysis",
+        "summary": "shareable_summary",
+        "shareable summary": "shareable_summary",
+    }
+    data = _extract_kv(text, key_map)
+    if "toxic_score" not in data:
+        m = re.search(r"toxic\s*score\s*[:\-–]?\s*(\d{1,3})", text, re.I)
+        if m:
+            data["toxic_score"] = int(m.group(1))
+    return data
 # ═══════════════════════════════════════════════════════════════
 # GENERATION CONFIGS
 # ═══════════════════════════════════════════════════════════════
@@ -237,10 +314,12 @@ Analyze this chat screenshot. Read every message, note timestamps, and cross-ref
 
     result = _extract_json(response_text)
     if result is None:
+        result = _parse_receipts_from_text(response_text)
+    if not result:
         result = {
                 "toxic_score": 65,
                 "red_flags": [{"flag": "Could not fully analyze", "severity": 5, "planetary_cause": "Mercury interference"}],
-                "verdict": text[:500],
+                "verdict": response_text[:500],
                 "planetary_context": planetary_context[:200],
                 "advice": "Try uploading a clearer screenshot for better analysis.",
                 "timestamp_analysis": "",
@@ -285,6 +364,8 @@ async def check_compatibility(
 
     result = _extract_json(response_text)
     if result is None:
+        result = _parse_match_from_text(response_text)
+    if not result:
         result = {
                 "overall_score": 65,
                 "toxic_level": "Medium",
@@ -351,6 +432,8 @@ async def generate_remedy(
 
     result = _extract_json(response_text)
     if result is None:
+        result = _parse_remedy_from_text(response_text)
+    if not result:
         result = {
                 "title": "General Wellness Upay",
                 "description": "Light a ghee diya at sunset and meditate for 5 minutes.",
