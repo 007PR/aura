@@ -39,7 +39,6 @@ ANALYSIS_CONFIG = {
     "topP": 0.9,
     "topK": 30,
     "maxOutputTokens": 1500,
-    "responseMimeType": "application/json",
 }
 
 
