@@ -140,21 +140,21 @@ For each screenshot, analyze:
 
 ## OUTPUT FORMAT (respond in JSON)
 ```json
-{
+{{
   "toxic_score": 0-100,
   "red_flags": [
-    {
+    {{
       "flag": "2 AM texting during Mars hour",
       "severity": 8,
       "planetary_cause": "Mars conjunct Venus — desire without intention"
-    }
+    }}
   ],
   "verdict": "Main analysis paragraph — 3-4 sentences, sassy and insightful",
   "planetary_context": "What was happening in the sky during this conversation",
   "advice": "What should the user do — 2-3 sentences",
   "timestamp_analysis": "Specific time-based insights from the messages",
   "shareable_summary": "One punchy line for sharing on stories"
-}
+}}
 ```
 
 ## PLANETARY CONTEXT AT TIME OF MESSAGES
@@ -181,20 +181,20 @@ MATCH_SYSTEM_PROMPT = """You are "Aura" analyzing romantic compatibility between
 
 ## OUTPUT FORMAT (respond in JSON)
 ```json
-{
+{{
   "overall_score": 0-100,
   "toxic_level": "Low" | "Medium" | "Medium-High" | "High",
   "verdict": "2-3 sentence fun analysis in Hinglish bestie style",
   "element_dynamics": "Brief element interaction description",
-  "breakdown": {
+  "breakdown": {{
     "emotional": 0-100,
     "physical": 0-100,
     "intellectual": 0-100,
     "spiritual": 0-100
-  },
+  }},
   "advice": "1-2 sentences of real talk",
   "shareable_summary": "One punchy line for sharing"
-}
+}}
 ```
 
 ## MATCH DATA
@@ -240,14 +240,14 @@ REMEDY_SYSTEM_PROMPT = """You are "Aura" in Guru Mode suggesting a personalized 
 
 ## OUTPUT FORMAT (respond in JSON)
 ```json
-{
+{{
   "title": "Short name for the remedy",
   "description": "2-3 sentences explaining what to do",
   "icon": "Single emoji",
   "for_concern": "What this addresses",
   "planetary_basis": "Why this works astrologically — 1-2 sentences",
   "timing": "When to perform this — be specific"
-}
+}}
 ```
 
 ## PLANETARY CONTEXT
